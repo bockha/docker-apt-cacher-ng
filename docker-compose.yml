@@ -2,8 +2,9 @@ version: '2.2'
 
 services:
   apt-cacher-ng:
+    network_mode: host
     restart: always
-    image: sameersbn/apt-cacher-ng:3.1-2
+    image: bockha/apt-cacher-ng
     init: true
     ports:
     - "3142:3142"

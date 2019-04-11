@@ -1,6 +1,6 @@
-FROM ubuntu:bionic-20181204
+FROM ubuntu
 
-LABEL maintainer="sameer@damagehead.com"
+LABEL maintainer="Hans-Peter.Bock@trumpf.com"
 
 ENV APT_CACHER_NG_VERSION=3.1 \
     APT_CACHER_NG_CACHE_DIR=/var/cache/apt-cacher-ng \
@@ -10,8 +10,10 @@ ENV APT_CACHER_NG_VERSION=3.1 \
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
       apt-cacher-ng=${APT_CACHER_NG_VERSION}* ca-certificates \
+      avahi-daemon \
  && sed 's/# ForeGround: 0/ForeGround: 1/' -i /etc/apt-cacher-ng/acng.conf \
  && sed 's/# PassThroughPattern:.*this would allow.*/PassThroughPattern: .* #/' -i /etc/apt-cacher-ng/acng.conf \
+ && sed 's/#enable-dbus=yes/enable-dbus=no/' -i /etc/avahi/avahi-daemon.conf \
  && rm -rf /var/lib/apt/lists/*
 
 COPY entrypoint.sh /sbin/entrypoint.sh

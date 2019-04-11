@@ -1,7 +1,4 @@
-[![Circle CI](https://circleci.com/gh/sameersbn/docker-apt-cacher-ng.svg?style=shield)](https://circleci.com/gh/sameersbn/docker-apt-cacher-ng) [![Docker Repository on Quay.io](https://quay.io/repository/sameersbn/apt-cacher-ng/status "Docker Repository on Quay.io")](https://quay.io/repository/sameersbn/apt-cacher-ng)
-
-# sameersbn/apt-cacher-ng:3.1-2
-
+# bockha/apt-cacher-ng
 - [Introduction](#introduction)
   - [Contributing](#contributing)
   - [Issues](#issues)
@@ -20,9 +17,13 @@
 
 # Introduction
 
-`Dockerfile` to create a [Docker](https://www.docker.com/) container image for [Apt-Cacher NG](https://www.unix-ag.uni-kl.de/~bloch/acng/).
+`Dockerfile` to create a [Docker](https://www.docker.com/) container image for [Apt-Cacher NG](https://www.unix-ag.uni-kl.de/~bloch/acng/) with mdns announcement using `avahi-daemon` on your local network.
+
+It is based on the project [docker-apt-cacher-ng](https://github.com:sameersbn/docker-apt-cacher-ng) by [sameersbn](http://www.damagehead.com/donate/).
 
 Apt-Cacher NG is a caching proxy, specialized for package files from Linux distributors, primarily for [Debian](http://www.debian.org/) (and [Debian based](https://en.wikipedia.org/wiki/List_of_Linux_distributions#Debian-based)) distributions but not limited to those.
+
+This container includes _zeroconf_ functionality and announces its service using `avahi-daemon`. To get the benefit of this announcement, this docker container must be connected to the _host_ network.
 
 ## Contributing
 
@@ -30,7 +31,7 @@ If you find this image useful here's how you can help:
 
 - Send a pull request with your awesome features and bug fixes
 - Help users resolve their [issues](../../issues?q=is%3Aopen+is%3Aissue).
-- Support the development of this image with a [donation](http://www.damagehead.com/donate/)
+- Support the development of this image with a [donation](http://www.damagehead.com/donate/).
 
 ## Issues
 
@@ -48,18 +49,16 @@ If the above recommendations do not help then [report your issue](../../issues/n
 
 ## Installation
 
-Automated builds of the image are available on [Dockerhub](https://hub.docker.com/r/sameersbn/apt-cacher-ng) and is the recommended method of installation.
-
-> **Note**: Builds are also available on [Quay.io](https://quay.io/repository/sameersbn/apt-cacher-ng)
+Automated builds of the image are available on [Dockerhub](https://hub.docker.com/r/bockha/apt-cacher-ng) and is the recommended method of installation.
 
 ```bash
-docker pull sameersbn/apt-cacher-ng:3.1-2
+docker pull bockha/apt-cacher-ng
 ```
 
 Alternatively you can build the image yourself.
 
 ```bash
-docker build -t sameersbn/apt-cacher-ng github.com/sameersbn/docker-apt-cacher-ng
+docker build -t bockha/apt-cacher-ng github.com/bockha/docker-apt-cacher-ng
 ```
 
 ## Quickstart
@@ -68,10 +67,12 @@ Start Apt-Cacher NG using:
 
 ```bash
 docker run --name apt-cacher-ng --init -d --restart=always \
-  --publish 3142:3142 \
-  --volume /srv/docker/apt-cacher-ng:/var/cache/apt-cacher-ng \
-  sameersbn/apt-cacher-ng:3.1-2
+  --network host \
+  --volume /tmp/apt-cacher-ng:/var/cache/apt-cacher-ng \
+  bockha/apt-cacher-ng
 ```
+
+> *For productive use, you should map the volume to a better suited place than `/tmp/`.*
 
 *Alternatively, you can use the sample [docker-compose.yml](docker-compose.yml) file to start the container using [Docker Compose](https://docs.docker.com/compose/)*
 
@@ -81,9 +82,9 @@ You can customize the launch command of Apt-Cacher NG server by specifying argum
 
 ```bash
 docker run --name apt-cacher-ng --init -it --rm \
-  --publish 3142:3142 \
-  --volume /srv/docker/apt-cacher-ng:/var/cache/apt-cacher-ng \
-  sameersbn/apt-cacher-ng:3.1-2 -h
+  --network host \
+  --volume /tmp/apt-cacher-ng:/var/cache/apt-cacher-ng \
+  bockha/apt-cacher-ng -h
 ```
 
 ## Persistence
@@ -95,8 +96,8 @@ For the cache to preserve its state across container shutdown and startup you sh
 SELinux users should update the security context of the host mountpoint so that it plays nicely with Docker:
 
 ```bash
-mkdir -p /srv/docker/apt-cacher-ng
-chcon -Rt svirt_sandbox_file_t /srv/docker/apt-cacher-ng
+mkdir -p /tmp/apt-cacher-ng
+chcon -Rt svirt_sandbox_file_t /tmp/apt-cacher-ng
 ```
 
 ## Docker Compose
@@ -109,10 +110,9 @@ version: '3'
 
 services:
   apt-cacher-ng:
-    image: sameersbn/apt-cacher-ng
+    image: bockha/apt-cacher-ng
     container_name: apt-cacher-ng
-    ports:
-      - "3142:3142"
+    network: host
     volumes:
       - apt-cacher-ng:/var/cache/apt-cacher-ng
     restart: always
@@ -129,18 +129,10 @@ docker-compose up -d
 
 ## Usage
 
-To start using Apt-Cacher NG on your Debian (and Debian based) host, create the configuration file `/etc/apt/apt.conf.d/01proxy` with the following content:
+To start using Apt-Cacher NG on your Debian (and Debian based) host, simply install the debian package `squid-deb-proxy-client`on each host.
 
-```config
-Acquire::HTTP::Proxy "http://172.17.0.1:3142";
-Acquire::HTTPS::Proxy "false";
-```
-
-Similarly, to use Apt-Cacher NG in you Docker containers add the following line to your `Dockerfile` before any `apt-get` commands.
-
-```dockerfile
-RUN echo 'Acquire::HTTP::Proxy "http://172.17.0.1:3142";' >> /etc/apt/apt.conf.d/01proxy \
- && echo 'Acquire::HTTPS::Proxy "false";' >> /etc/apt/apt.conf.d/01proxy
+```bash
+sudo apt-get install squid-deb-proxy-client
 ```
 
 ## Logs
@@ -159,9 +151,9 @@ Using the [Command-line arguments](#command-line-arguments) feature, you can spe
 
 ```bash
 docker run --name apt-cacher-ng --init -it --rm \
-  --publish 3142:3142 \
-  --volume /srv/docker/apt-cacher-ng:/var/cache/apt-cacher-ng \
-  sameersbn/apt-cacher-ng:3.1-2 -e
+  --network host \
+  --volume /tmp/apt-cacher-ng:/var/cache/apt-cacher-ng \
+  bockha/apt-cacher-ng -e
 ```
 
 The same can also be achieved on a running instance by visiting the url http://localhost:3142/acng-report.html in the web browser and selecting the **Start Scan and/or Expiration** option.
@@ -173,7 +165,7 @@ To upgrade to newer releases:
   1. Download the updated Docker image:
 
   ```bash
-  docker pull sameersbn/apt-cacher-ng:3.1-2
+  docker pull bockha/apt-cacher-ng
   ```
 
   2. Stop the currently running image:
@@ -193,7 +185,7 @@ To upgrade to newer releases:
   ```bash
   docker run --name apt-cacher-ng --init -d \
     [OPTIONS] \
-    sameersbn/apt-cacher-ng:3.1-2
+    bockha/apt-cacher-ng
   ```
 
 ## Shell Access
