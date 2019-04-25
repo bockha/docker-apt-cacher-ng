@@ -19,9 +19,16 @@ create_log_dir() {
   chown -R ${APT_CACHER_NG_USER}:${APT_CACHER_NG_USER} ${APT_CACHER_NG_LOG_DIR}
 }
 
+update_avahi_host_name() {
+  grep -v "^host-name" /etc/avahi/avahi-daemon.conf >/etc/avahi/avahi-daemon.conf.new
+  mv /etc/avahi/avahi-daemon.conf.new /etc/avahi/avahi-daemon.conf
+  [ -z "$HOSTNAME" ] || sed "s/#host-name=foo/host-name=${HOSTNAME}\n#host-name=foo/" -i /etc/avahi/avahi-daemon.conf
+}
+
 create_pid_dir
 create_cache_dir
 create_log_dir
+update_avahi_host_name
 
 # allow arguments to be passed to apt-cacher-ng
 if [[ ${1:0:1} = '-' ]]; then
